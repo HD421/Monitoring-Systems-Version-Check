@@ -2,9 +2,11 @@
 
 import argparse
 import json
-# import jsonpath_rw READ THE DOCKS
+import os
+import jsonpath_rw as jp
 import urllib2
 import ssl
+import pprint
 from BeautifulSoup import BeautifulSoup
 
 __author__ = 'H_D'
@@ -56,26 +58,29 @@ def version_check(html):
     print("[X] Build is : ", get_buildV)
     print("[X] Product name is :", get_productName)
 
-    payload = {'query':'{} version:{}'.format(get_productName,get_version),
+    payload = {'query':'{} version:<={}'.format(get_productName,get_version),
                 'size':5,
                 'sort':'cvss.score',
                 'references':'true',
+                'fields': ['id','cve']
                }
     print "payload", payload
     url = 'https://vulners.com/api/v3/search/lucene/'
     response = sendVulnRequest(url, payload)
-    print "RESPONSE", response
     resultCode = response.get("result")
     if resultCode == "OK":
-        vulnsFound = response.get('data').get('vulnerabilities')
-        print "VULNS FOUND", vulnsFound
-        if not vulnsFound:
-                print("   - No vulnerabilities found.")
-        else:
-            payload = {'id': vulnsFound}
-            allVulnsInfo = sendVulnRequest(url, payload)
-            print allVulnsInfo
-    
+        # print "VULNS FOUND", vulnsFound
+        cvelist = []
+        references = response.get('data').get('references')
+        for item in references:
+            for reference in references[item]:
+                for refID in references[item][reference]:
+                    cvelist = cvelist + refID['cvelist']
+        if len(cvelist) == 0:
+            print("   - No vulnerabilities found.")
+            return
+        for cve in cvelist:
+            print(' - ' + cve);
 
 def sendVulnRequest(url, payload):
     req = urllib2.Request(url)
