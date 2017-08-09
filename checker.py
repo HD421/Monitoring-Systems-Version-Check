@@ -3,7 +3,6 @@
 import argparse
 import json
 import os
-import jsonpath_rw as jp
 import urllib2
 import ssl
 import pprint
@@ -54,33 +53,36 @@ def version_check(html):
     get_productName = soup.find('input', {"name": "product"})['value']
     get_buildV = soup.find('input', {"name": "build"})['value']
 
-    print("[X] Nagios version is :", get_version)
-    print("[X] Build is : ", get_buildV)
-    print("[X] Product name is :", get_productName)
+    print("[X] Nagios version is : "+ get_version)
+    print("[X] Build is : "+ get_buildV)
+    print("[X] Product name is : "+ get_productName)
 
-    payload = {'query':'{} version:<={}'.format(get_productName,get_version),
+    payload = {'query':'{} {}'.format(get_productName,get_version),
                 'size':5,
                 'sort':'cvss.score',
                 'references':'true',
-                'fields': ['id','cve']
+                'fields': ['id','cve','title']
                }
-    print "payload", payload
+    # print "payload", payload
     url = 'https://vulners.com/api/v3/search/lucene/'
     response = sendVulnRequest(url, payload)
     resultCode = response.get("result")
     if resultCode == "OK":
         # print "VULNS FOUND", vulnsFound
         cvelist = []
-        references = response.get('data').get('references')
-        for item in references:
-            for reference in references[item]:
-                for refID in references[item][reference]:
-                    cvelist = cvelist + refID['cvelist']
-        if len(cvelist) == 0:
-            print("   - No vulnerabilities found.")
-            return
-        for cve in cvelist:
-            print(' - ' + cve);
+        try:
+            references = response.get('data').get('references')
+            # print "\n\n\n\n",references
+            for item in references:
+                for reference in references[item]:
+                    for refID in references[item][reference]:
+                        cvelist = cvelist + refID['cvelist']
+            for cve in cvelist:
+                print(' - ' + cve);
+        except TypeError:
+            if len(cvelist) == 0:
+                print("   - No vulnerabilities found.")
+                return
 
 def sendVulnRequest(url, payload):
     req = urllib2.Request(url)
