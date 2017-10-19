@@ -5,6 +5,7 @@ import json
 import os
 import urllib2
 import ssl
+import re
 import pprint
 from BeautifulSoup import BeautifulSoup
 
@@ -34,6 +35,7 @@ parser = argparse.ArgumentParser(description='Command-line tool for Nagios finge
 
 parser.add_argument("-H", "--host", help="Host to fingerprint")
 parser.add_argument("-p", "--port", help="Port on which Nagios is located", type=int)
+parser.add_argument("-t", "--type", help="What system are we going to fingerprint? Use N for nagios, Z for zabbix, C for cacti", default="N")
 
 args = parser.parse_args()
 
@@ -47,7 +49,7 @@ def get_html(url):
     response = urllib2.urlopen(url, timeout=5, context=ctx)
     return response.read()
 
-def version_check(html):
+def nagios_version_check(html):
     soup = BeautifulSoup(html)
     get_version = soup.find('input', {"name": "version"})['value']
     get_productName = soup.find('input', {"name": "product"})['value']
@@ -84,6 +86,16 @@ def version_check(html):
                 print("   - No vulnerabilities found.")
                 return
 
+def zabbix_version_check(html):
+    soup = BeautifulSoup(html)
+    
+    for link in soup.findAll('a', attrs={'href': re.compile("documentation")}):
+        version=link.get('href')
+
+    parts = re.split('/', version)
+    a = ''.join(parts[4:5])
+    print("[X] Zabbix version is " + a)
+
 def sendVulnRequest(url, payload):
     req = urllib2.Request(url)
     req.add_header('Content-Type', 'application/json')
@@ -96,23 +108,34 @@ def sendVulnRequest(url, payload):
     return responseData
 
 def main():
-    
-    link = '{}:{}/nagiosxi/login.php'.format(args.host, args.port)
 
     try:
-        version_check(get_html(link))
+        if args.type is "N":
+            link = '{}:{}/nagiosxi/login.php'.format(args.host, args.port)
+            nagios_version_check(get_html(link))
+        if args.type is "Z":
+            link = '{}:{}/zabbix/'.format(args.host, args.port)
+            zabbix_version_check(get_html(link))
+
+    except UnboundLocalError:
+        print(
+            "You are trying to use a nonexistent key"
+        )
     except urllib2.URLError:
         print("SSL is not avaliable, trying http://" + link)
         link = 'http://{}'.format(link)
         try:
-            version_check(get_html(link))
+            if args.type is "N":
+                nagios_version_check(get_html(link))
+            if args.type is "Z":
+                zabbix_version_check(get_html(link))
         except TypeError:
             print(
                 "Something went wrong, unable to fingerprint this server. Maybe this Nagios is placed on specific port?"
             )
     except TypeError:
         print(
-            "Something went wrong, i didn't found a valid redirect or info about versions"
+            "Something went wrong, i didn't found a valid redirect or info about version"
         )  # TODO need some refactoring
 
 
