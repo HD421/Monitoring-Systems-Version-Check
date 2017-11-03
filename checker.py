@@ -15,7 +15,7 @@ __version__ = '0.1'
 VULNERS_LINK = {'bulletin':'https://vulners.com/api/v3/search/id/'}
 
 ASCII = r"""
-=================================================================
+==================================================================
  __    __  _______         ______                                
 /  |  /  |/       \       /      \                               
 $$ |  $$ |$$$$$$$  |     /$$$$$$  |  _______   ______   _______  
@@ -26,9 +26,9 @@ $$ |  $$ |$$ |__$$ |     /  \__$$ |$$ \_____ /$$$$$$$ |$$ |  $$ |
 $$ |  $$ |$$    $$/______$$    $$/ $$       |$$    $$ |$$ |  $$ |
 $$/   $$/ $$$$$$$//      |$$$$$$/   $$$$$$$/  $$$$$$$/ $$/   $$/ 
                   $$$$$$/                                        
-    NagiosXI version detector and Vulnerability scanner
+    NagiosXI & Zabbix version detector and Vulnerabilities scanner
                     based on Vulners API                                                                 
-=================================================================                                                                 
+==================================================================                                                                 
 """
 
 parser = argparse.ArgumentParser(description='Command-line tool for Nagios fingerprint')
@@ -65,16 +65,13 @@ def nagios_version_check(html):
                 'references':'true',
                 'fields': ['id','cve','title']
                }
-    # print "payload", payload
     url = 'https://vulners.com/api/v3/search/lucene/'
     response = sendVulnRequest(url, payload)
     resultCode = response.get("result")
     if resultCode == "OK":
-        # print "VULNS FOUND", vulnsFound
         cvelist = []
         try:
             references = response.get('data').get('references')
-            # print "\n\n\n\n",references
             for item in references:
                 for reference in references[item]:
                     for refID in references[item][reference]:
@@ -93,8 +90,32 @@ def zabbix_version_check(html):
         version=link.get('href')
 
     parts = re.split('/', version)
-    a = ''.join(parts[4:5])
-    print("[X] Zabbix version is " + a)
+    get_version = ''.join(parts[4:5])
+    print("[X] Zabbix version is " + get_version)
+
+    payload = {'query':'Zabbix {}'.format(get_version),
+                'size':5,
+                'sort':'cvss.score',
+                'references':'true',
+                'fields': ['id','cve','title']
+               }
+    url = 'https://vulners.com/api/v3/search/lucene/'
+    response = sendVulnRequest(url, payload)
+    resultCode = response.get("result")
+    if resultCode == "OK":
+        cvelist = []
+        try:
+            references = response.get('data').get('references')
+            for item in references:
+                for reference in references[item]:
+                    for refID in references[item][reference]:
+                        cvelist = cvelist + refID['cvelist']
+            for cve in cvelist:
+                print(' - ' + cve);
+        except TypeError:
+            if len(cvelist) == 0:
+                print("   - No vulnerabilities found.")
+                return
 
 def sendVulnRequest(url, payload):
     req = urllib2.Request(url)
