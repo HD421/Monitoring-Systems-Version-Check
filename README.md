@@ -1,5 +1,5 @@
 # Monitoring-Systems-Version-Check
-Checker script can fingerprint NagiosXI or Zabbix monitoring system. It's also trying to get a list of known CVE for this version.
+mScan script can fingerprint NagiosXI or Zabbix monitoring system. It's also trying to get a list of known CVE for this version.
 
 python 2.7 required
 ## Dependencies
