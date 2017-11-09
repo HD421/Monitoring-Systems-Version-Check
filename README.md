@@ -9,7 +9,7 @@ pip install beautifulsoup4
 ```
 ## Usage
 ```
-Usage: python2.7 checker.py [HOST] [PORT] [TYPE](optional)
+Usage: python2.7 mScan.py [HOST] [PORT] [TYPE](optional)
 
 Options :
 -h, --help              Show help message and exit
